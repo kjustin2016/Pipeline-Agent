@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 
 # Environment/config files
-.env
+**/.env
 
 # VSCode
 .vscode/
