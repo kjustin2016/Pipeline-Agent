@@ -15,7 +15,7 @@ def analyze_opportunity_status() -> str:
     target_statuses = ['Cultivation', 'Solicitation', 'Stewardship', 'Qualification']
     
     try:
-        df = pd.read_excel(r'C:\Users\justi\Desktop\School\Internship\internship\PipelineAI\agentfiles\googleADK\manager\data.xlsx')
+        df = pd.read_excel(r'C:\Users\justi\Desktop\School\Internship\internship\PipelineAI\agentfiles\googleADK\manager\datatesting.xlsx')
 
         relevant_df = df[df['Opportunity Status'].isin(target_statuses)]
 

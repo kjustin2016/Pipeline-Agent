@@ -24,8 +24,7 @@ root_agent = Agent(
 
     You are responsible for delegating tasks to the following agents:
     - composition_analysis_agent
-    - data_update_manager_agent
     - pipeline_review_agent
     """,
-    sub_agents=[pipeline_review_agent, composition_analysis_agent, data_update_manager_agent]
+    sub_agents=[pipeline_review_agent, composition_analysis_agent]
 )
