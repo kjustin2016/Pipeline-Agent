@@ -9,23 +9,6 @@ GEMINI_MODEL='gemini-2.0-flash'
 def identify_date() -> str:
     return date.today().isoformat()
 
-
-def filter_data(assigned_to_name: str) -> str:
-    """
-    Uses the name of the user that is passed in to identify the opportunities that belong to them.
-    This function should return all of the opportunities that is assigned to the user by filtering
-    the dataset by the 'Assigned To' column and returning all of the opportunities that have the user's
-    name in the 'Assigned To' column.
-    """
-    try:
-        df = pd.read_excel(r'C:\Users\justi\Desktop\School\Internship\internship\PipelineAI\agentfiles\googleADK\manager\datatesting.xlsx')
-        filtered_df = df[df['Assigned To'] == assigned_to_name]
-        return filtered_df.to_json(orient='records')
-
-    except Exception as e:
-        return f"An unexpected error occurred while processing the file: {e}"
-
-filter_data_tool = FunctionTool(filter_data)
 identify_date_tool = FunctionTool(identify_date)
 
 pipeline_review_agent = Agent(
@@ -35,6 +18,9 @@ pipeline_review_agent = Agent(
     instruction="""
 
     An agent that performs a pipline review for the user, who is a development officer for a non profit organization.
+
+    This agent will recieve a JSON-formatted list of dictionaries that contains the opportunities from an opportunity file in which
+    these opportunities are assigned to the user.
 
     You are a sophisticated Development Management Consultant with 15+ years of experience in moves management methodology and 
     professional consultation frameworks. You specialize in:
@@ -60,18 +46,13 @@ pipeline_review_agent = Agent(
     The agent should also analyze the data and identify areas of improvement based on absolute expertise on this subject matter.
     To analyze this data, the agent will be an expert in moves management methodology and professional consultation frameworks.
 
-    The agent should know who the user is, so that it can identify the opportunities that correspond to the user.
-    The agent can identify the relevant opportunities by filtering the data by the 'Assigned To' values that match
-    the user's name. The agent should use the filter_data function to identify the relevant opportunities.
-
-    The agent should *NEEDS* to determine the current date of when the user started the conversation. This can be done by using the
+    The agent should *NEEDS* to determine the current date. This can be done by using the
     identify_date tool. The agent should do this to further analyze their data, such as knowing that the next action date has passed
-    and to see how that action went.
+    and to see how that passed action went.
 
     The agent should then review the relevant opportunities that correspond to the user, and using the expertise it has
-    and the knowledge stated above, the agent should review all of the opportunities with the user, starting from the highest
-    priority first and then finishing with the lowest priority according to it's expertise and knowledge of what should
-    be prioritized.
+    and the knowledge stated above, the agent should review all of the opportunities with the user, starting from the first opportunity
+    and then finishing with the last opportunity in the JSON-formatted list of dictionaries.
 
     In this review, the agent should go over every opportunity associated with the user and inquire the user
     about missing information in the data, potential updates to the data, or challenge the user to make
@@ -84,5 +65,5 @@ pipeline_review_agent = Agent(
     - data_update_manager_agent
     """,
     sub_agents=[data_update_manager_agent],
-    tools=[filter_data_tool, identify_date_tool]
+    tools=[identify_date_tool]
 )

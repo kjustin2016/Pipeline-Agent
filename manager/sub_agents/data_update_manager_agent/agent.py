@@ -11,7 +11,7 @@ def locate_opportunity(constituent_name: str) -> str:
     into this function by finding the Constituent ID that is associated with that name.
     """
     try:
-        df = pd.read_excel(r'C:\Users\justi\Desktop\School\Internship\internship\PipelineAI\agentfiles\googleADK\manager\datatesting.xlsx')
+        df = pd.read_excel(r'C:\Users\justi\Desktop\School\Internship\internship\PipelineAI\agentfiles\googleADbranch2\manager\datatesting.xlsx')
 
         result = df.loc[df['Constituent Name'] == constituent_name, 'Constituent ID'].values
 
@@ -32,7 +32,7 @@ def upload_data(relevant_data: list[dict]) -> str:
     """
     
     try:
-        df = pd.read_excel(r'C:\Users\justi\Desktop\School\Internship\internship\PipelineAI\agentfiles\googleADK\manager\datatesting.xlsx')
+        df = pd.read_excel(r'C:\Users\justi\Desktop\School\Internship\internship\PipelineAI\agentfiles\googleADKbranch2\manager\datatesting.xlsx')
 
         df['Constituent ID'] = df['Constituent ID'].astype(int)
 
@@ -59,7 +59,7 @@ def upload_data(relevant_data: list[dict]) -> str:
             
             df.loc[df["Constituent ID"] == constituent_id, column] = value
         
-        df.to_excel(r'C:\Users\justi\Desktop\School\Internship\internship\PipelineAI\agentfiles\googleADK\manager\datatesting.xlsx', index=False)
+        df.to_excel(r'C:\Users\justi\Desktop\School\Internship\internship\PipelineAI\agentfiles\googleADKbranch2\manager\datatesting.xlsx', index=False)
         
         return "Update successful. The data has been changed."
 
@@ -160,8 +160,7 @@ data_update_manager_agent = Agent(
     model=GEMINI_MODEL,
     description="Data update manager agent",
     instruction="""
-    You are the manager agent that is responsible for facilitating the updating of the user's dataset and for
-    identifying which opportunity the user would like to update.
+    You are the manager agent that is responsible for facilitating the updating of the user's dataset.
 
     This agent should assume the role of a sophisticated development management
     consultant/senior development manager with 15+ years of experience.
