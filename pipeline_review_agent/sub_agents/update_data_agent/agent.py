@@ -89,29 +89,27 @@ data_uploader = LlmAgent(
 )
 
 data_extractor = LlmAgent(
-    name="data_extractor_agent",
+    name="data_extractor",
     model=GEMINI_MODEL,
-    description="An agent that takes the user's response and extracts and summarizes the relevant data, and formats it",
+    description="An agent that extracts the relevant data that the user wants to update his dataset with from the conversation, summarizes the relevant data, and then formats it",
     instruction="""
-    An agent that analyzes and formats the new data that the user wants to update their dataset with.
+    An agent that analyzes what new data the user wants to update his current dataset with and then formats it.
 
-    This agent should determine the Constituent ID, the correct column from the user's dataset that this new data
-    belongs in, and extract the actual information that the user wants to put in
-    their dataset, and then format this data.
+    This agent should determine how many updates the user wants to do, determine the Constituent ID (the row) that the user wants to update based
+    on the output from the record locator, determine the correct column from the user's dataset that each update should update, and should extract the actual information that the user wants to update his dataset with for every single
+    update that the user wants to upload. The user may just want to update one data from a record or multiple data from a record.
 
-    This agent should determine which column the data should be updating based on
+    This agent should determine which column the data for each update should update based on
     the possible column headers: Assigned To, Opportunity Name, Opportunity Purpose, Opportunity Status, Opportunity Assigned 
     To, Amount Asked, Date Asked, Amount Expected, Amount Funded, Date Funded, Last Action Category, Last Action Type, Last Action Date,
     Last Action Completed Date, Last Action Assigned To, Next Action Category, Next Action Type, Next Action Date, Next Action Assigned To.
 
     The agent should determine the relevant data that the user wants to update their
-    dataset with, and summarize this user data into wording that reflects wording found in
+    dataset with for each update, and summarize this user data into wording that reflects wording found in
     standard opportunity files for donor data.
 
-    The agent should reformat this collected and summarized data into a JSON format.
-
-    After reformatting, Output *only* the data as a JSON array of dictionaries in this format:
-
+    The agent should reformat this collected and summarized data into a JSON array of dictionaries, containing
+    each update and should be in this format:
 [
   {
     "Constituent ID": 412161,
@@ -124,6 +122,7 @@ data_extractor = LlmAgent(
     "Value": "Phone Call"
   }
 ]
+    *ONLY output the JSON array of dictionaries
 
     Do not include any extra text or explanation, only the JSON array.
 
@@ -132,51 +131,27 @@ data_extractor = LlmAgent(
     output_key="generated_data"
 )
 
-data_upload_pipeline_agent = SequentialAgent(
-    name="data_upload_pipeline_agent",
-    sub_agents=[data_extractor, data_uploader],
-    description="Executes a sequence of extracting relevant data and uploading it into the user's dataset.",
-)
-
-opportunity_identifier = Agent(
-    name="opportunity_identifier",
+record_locator = Agent(
+    name="record_locator",
     model=GEMINI_MODEL,
-    description="An agent that identifies which opportunity the user wants to update",
+    description="An agent that locates the correct record to update",
     instruction="""
-    An agent that determines which opportunity the user wants to update.
+    An agent that determines which record the user wants to update.
 
-    The name of the constituent that the opportunity is correlated with should be provided,
-    and that name should be used to locate the opportunity in the opportunity file. The agent should
-    find the Constituent ID to identify the opportunity.
+    Use the information from the conversation to determine which constituent the user wants to make updates for, and ultimately
+    determine the Consituent ID of the correct constituent.
+    **************************************************************************
+    The constituent name should be used to locate the correct record to update in the opportunity file by matching the constituent
+    name to the constituent ID.
 
-    The agent should use the locate_opportunity function to find the Constituent ID that is
+    The agent should use the locate_record_tool function to find the Constituent ID that is
     associated with the name provided.
     """,
     tools=[locate_opportunity_tool]
 )
 
-data_update_manager_agent = Agent(
-    name='data_update_manager_agent',
-    model=GEMINI_MODEL,
-    description="Data update manager agent",
-    instruction="""
-    You are the manager agent that is responsible for facilitating the updating of the user's dataset.
-
-    This agent should assume the role of a sophisticated development management
-    consultant/senior development manager with 15+ years of experience.
-
-    The agent should first discover the opportunity associated with the constituent name, and then
-    should update the user's dataset for his opportunities.
-
-    Interact with the user and determine if you should transfer to other agents. Use your best judgement
-    to determine which agent to delegate to.
-
-    Send the user to the data_upload_pipeline_agent when they are ready to
-    update their data and have confirmed the values they want to update.
-
-    You are responsible for delegating tasks to the following agent:
-    - data_upload_pipeline_agent
-    - opportunity_identifier
-    """,
-    sub_agents=[data_upload_pipeline_agent, opportunity_identifier]
+update_data_agent = SequentialAgent(
+    name="update_data_agent",
+    sub_agents=[record_locator,data_extractor, data_uploader],
+    description="Updates the user's data by executing a sequence of extracting relevant data to be updated from the conversation, identifying the correct record(s) to update, and uploading the data into the user's dataset.",
 )
