@@ -9,6 +9,7 @@ def locate_record(constituent_name: str) -> str:
     """
     Determines the correct record from the opportunity file that is associated with the constituent name that is passed
     into this function by finding the Constituent ID that is associated with that name.
+    **THIS TOOL SHOULD ONLY BE RUN ONCE**
     """
     try:
         df = pd.read_excel('pipeline_review_agent/datatesting.xlsx')
@@ -29,6 +30,7 @@ def upload_data(relevant_data: list[dict]) -> str:
     Updates the user's dataset by uploading the information that is passed into it into the user's dataset.
     This information may contain one specific value from a row to update, or multiple values for the same row.
     This tool should be passed a dictionary in JSON format.
+    **THIS TOOL SHOULD ONLY BE RUN ONCE**
     """
     
     try:
@@ -82,7 +84,7 @@ data_uploader = LlmAgent(
     {generated_data}
 
     This agent *MUST USE* the upload_data tool to complete the process of updating the user's dataset. Give the tool the JSON-formatted
-    list of dictionaries that was created by the data_extractor.
+    list of dictionaries that was created by the data_extractor. Only use the upload_data tool one time, do not run that tool more than once.
 
     After the tool has run, use the output from the tool as your response to the user.
     """,
@@ -161,7 +163,8 @@ record_locator = Agent(
     name to the constituent ID.
 
     The agent should use the locate_record_tool tool to find correct record that the user wants to update by
-    identifying the Constituent ID that is associated with the constituent name provided.
+    identifying the Constituent ID that is associated with the constituent name provided. Only use this tool once, do not use it
+    more than once.
     """,
     tools=[locate_record_tool]
 )
