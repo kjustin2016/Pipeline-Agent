@@ -3,20 +3,20 @@ from google.adk.tools import FunctionTool
 import pandas as pd
 
 
-GEMINI_MODEL='gemini-2.0-flash'
+GEMINI_MODEL='gemini-2.5-pro'
 
-def locate_opportunity(constituent_name: str) -> str:
+def locate_record(constituent_name: str) -> str:
     """
-    Determines the opportunity from the opportunity file that is associated with the name that is passed
+    Determines the correct record from the opportunity file that is associated with the constituent name that is passed
     into this function by finding the Constituent ID that is associated with that name.
     """
     try:
-        df = pd.read_excel(r'C:\Users\justi\Desktop\School\Internship\internship\PipelineAI\agentfiles\googleADbranch2\manager\datatesting.xlsx')
+        df = pd.read_excel('pipeline_review_agent/datatesting.xlsx')
 
         result = df.loc[df['Constituent Name'] == constituent_name, 'Constituent ID'].values
 
         if result.size > 0:
-            return f"Opportunity identified: Constituent ID = {result[0]}"
+            return f"Record identified: Constituent ID = {result[0]}"
         else:
             return "Name not found"
         
@@ -32,7 +32,7 @@ def upload_data(relevant_data: list[dict]) -> str:
     """
     
     try:
-        df = pd.read_excel(r'C:\Users\justi\Desktop\School\Internship\internship\PipelineAI\agentfiles\googleADKbranch2\manager\datatesting.xlsx')
+        df = pd.read_excel('pipeline_review_agent/datatesting.xlsx')
 
         df['Constituent ID'] = df['Constituent ID'].astype(int)
 
@@ -59,7 +59,7 @@ def upload_data(relevant_data: list[dict]) -> str:
             
             df.loc[df["Constituent ID"] == constituent_id, column] = value
         
-        df.to_excel(r'C:\Users\justi\Desktop\School\Internship\internship\PipelineAI\agentfiles\googleADKbranch2\manager\datatesting.xlsx', index=False)
+        df.to_excel('pipeline_review_agent/datatesting.xlsx', index=False)
         
         return "Update successful. The data has been changed."
 
@@ -68,22 +68,23 @@ def upload_data(relevant_data: list[dict]) -> str:
 
 upload_data_tool = FunctionTool(upload_data)
 
-locate_opportunity_tool = FunctionTool(locate_opportunity)
+locate_record_tool = FunctionTool(locate_record)
 
 
 data_uploader = LlmAgent(
     name="data_uploader",
     model=GEMINI_MODEL,
-    description="An agent that uploads the JSON-formatted list of dictionaries that is passed into it into the user's dataset",
+    description="An agent that uploads the data that the user wants to update their dataset with using the JSON-formatted list of dictionaries that is output from the data_extractor agent",
     instruction="""
-    An agent that takes the JSON-formatted list of dictionaries that is passed into it and updates the user's dataset with this information.
+    An agent that takes the JSON-formatted list of dictionaries that is passed into it from the data_extractor agent and updates the user's dataset with this information.
 
     JSON-formatted list of dictionaries to update the dataset:
     {generated_data}
 
-    This agent *MUST USE* the upload_data tool to complete the process of updating the user's dataset.
+    This agent *MUST USE* the upload_data tool to complete the process of updating the user's dataset. Give the tool the JSON-formatted
+    list of dictionaries that was created by the data_extractor.
 
-    After the tool has run, output the result from the tool as your final answer.
+    After the tool has run, use the output from the tool as your response to the user.
     """,
     tools=[upload_data_tool]
 )
@@ -91,12 +92,17 @@ data_uploader = LlmAgent(
 data_extractor = LlmAgent(
     name="data_extractor",
     model=GEMINI_MODEL,
-    description="An agent that extracts the relevant data that the user wants to update his dataset with from the conversation, summarizes the relevant data, and then formats it",
+    description="An agent that extracts the relevant data that the user wants to update his dataset with from the conversation and the locate_record_tool, summarizes the relevant data, and then formats it",
     instruction="""
     An agent that analyzes what new data the user wants to update his current dataset with and then formats it.
 
+    You should assume the role of a sophisticated development management 
+    consultant/senior development manager with 15+ years of experience. You specialize
+    in moves management expertise, and you assess prospects against industry standards
+    and professional best practices
+
     This agent should determine how many updates the user wants to do, determine the Constituent ID (the row) that the user wants to update based
-    on the output from the record locator, determine the correct column from the user's dataset that each update should update, and should extract the actual information that the user wants to update his dataset with for every single
+    on the output from the locate_record_tool tool, determine the correct column from the user's dataset that each update should update, and should extract the actual information that the user wants to update his dataset with for every single
     update that the user wants to upload. The user may just want to update one data from a record or multiple data from a record.
 
     This agent should determine which column the data for each update should update based on
@@ -107,6 +113,13 @@ data_extractor = LlmAgent(
     The agent should determine the relevant data that the user wants to update their
     dataset with for each update, and summarize this user data into wording that reflects wording found in
     standard opportunity files for donor data.
+
+    This may look like the user saying 'I want to plan my next action for John Smith to be a thank you phone call on August 10 2025', and then receiving
+    output from the locate_record_tool function to identify the Constituent ID for John Smith as 10110. So, this agent should know that the user
+    wants three updates to their data:
+    Constituent ID: 10110, Column: Next Action Category, Value: Phone Call,
+    Constituent ID: 10110, Column: Next Action Type, Value: Thank You, 
+    Constituent ID: 10110, Column: Next Action Date, Value: 8/10/2025  12:00:00 AM
 
     The agent should reformat this collected and summarized data into a JSON array of dictionaries, containing
     each update and should be in this format:
@@ -134,20 +147,23 @@ data_extractor = LlmAgent(
 record_locator = Agent(
     name="record_locator",
     model=GEMINI_MODEL,
-    description="An agent that locates the correct record to update",
+    description="An agent that locates the correct record to update by finding the Constituent ID",
     instruction="""
-    An agent that determines which record the user wants to update.
+    An agent that determines which record the user wants to update by finding the Constituent ID associated with the Constituent name.
 
-    Use the information from the conversation to determine which constituent the user wants to make updates for, and ultimately
+    Use the information from the conversation to determine which constituent the user wants to make the updates for, and ultimately
     determine the Consituent ID of the correct constituent.
-    **************************************************************************
+
+    Identify the name of the constituent that the user wants to update their data on and use that information to find the Constituent
+    ID that matches the constituent name
+
     The constituent name should be used to locate the correct record to update in the opportunity file by matching the constituent
     name to the constituent ID.
 
-    The agent should use the locate_record_tool function to find the Constituent ID that is
-    associated with the name provided.
+    The agent should use the locate_record_tool tool to find correct record that the user wants to update by
+    identifying the Constituent ID that is associated with the constituent name provided.
     """,
-    tools=[locate_opportunity_tool]
+    tools=[locate_record_tool]
 )
 
 update_data_agent = SequentialAgent(
