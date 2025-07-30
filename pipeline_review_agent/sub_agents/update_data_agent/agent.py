@@ -3,7 +3,7 @@ from google.adk.tools import FunctionTool
 import pandas as pd
 
 
-GEMINI_MODEL='gemini-2.5-pro'
+GEMINI_MODEL='gemini-2.0-flash'
 
 def locate_record(constituent_name: str) -> str:
     """
@@ -87,6 +87,8 @@ data_uploader = LlmAgent(
     list of dictionaries that was created by the data_extractor. Only use the upload_data tool one time, do not run that tool more than once.
 
     After the tool has run, use the output from the tool as your response to the user.
+
+    *ONLY RUN THE upload_data tool ONCE!!**
     """,
     tools=[upload_data_tool]
 )
@@ -163,8 +165,8 @@ record_locator = Agent(
     name to the constituent ID.
 
     The agent should use the locate_record_tool tool to find correct record that the user wants to update by
-    identifying the Constituent ID that is associated with the constituent name provided. Only use this tool once, do not use it
-    more than once.
+    identifying the Constituent ID that is associated with the constituent name provided.
+    **ONLY use the locate_record_tool tool once!! do not use it more than once.
     """,
     tools=[locate_record_tool]
 )

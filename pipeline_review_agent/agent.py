@@ -3,9 +3,9 @@ from google.adk.tools import FunctionTool
 import pandas as pd
 from datetime import date
 from .sub_agents.update_data_agent.agent import update_data_agent
+import numpy as np
 
-
-GEMINI_MODEL='gemini-2.5-pro'
+GEMINI_MODEL='gemini-2.0-flash'
 
 def extract_user_opportunities(user_name: str) -> list[dict]:
     """
@@ -17,13 +17,40 @@ def extract_user_opportunities(user_name: str) -> list[dict]:
 
         user_name = user_name.strip()
 
-        relevant_opportunities = df[df['Assigned To'] == user_name]
+        relevant_opportunities = df[df['Assigned To'] == user_name].copy()
 
-        relevant_opportunities_json = relevant_opportunities.to_json(orient="records")
+        for col in ["Constituent ID", "Amount Asked", "Amount Expected", "Amount Funded"]:
+            if col in relevant_opportunities.columns:
+                if relevant_opportunities[col].dtype in [np.float64, np.int64, float, int]:
+                    if (relevant_opportunities[col].dropna() % 1 == 0).all():
+                        relevant_opportunities.loc[:, col] = (
+                            relevant_opportunities[col].fillna(0).astype(int)
+                        )
+        
+        raw_dicts = relevant_opportunities.to_dict(orient="records")
 
-        return relevant_opportunities_json
+        def sanitize_types(data):
+            sanitized = []
+            for row in data:
+                clean_row = {}
+                for key, value in row.items():
+                    if pd.isna(value):
+                        clean_row[key] = None  # Replace NaN with None (JSON null)
+                    elif isinstance(value, (np.integer, np.int64, np.int32)):
+                        clean_row[key] = int(value)
+                    elif isinstance(value, (np.floating, np.float64, np.float32)):
+                        clean_row[key] = int(value) if value.is_integer() else float(value)
+                    elif isinstance(value, pd.Timestamp):
+                        clean_row[key] = value.isoformat()  # Serialize datetime properly
+                    else:
+                        clean_row[key] = value
+                sanitized.append(clean_row)
+            return sanitized
+
+        return sanitize_types(raw_dicts)
+    
     except Exception as e:
-        return f"An unexpected error occurred while processing the file: {e}"
+        raise RuntimeError(f"Failed to extract opportunities: {e}")
 
 def get_date() -> str:
     """
